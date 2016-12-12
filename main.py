@@ -73,7 +73,7 @@ ps_angle = math.atan(r_ps/r0) # half angle of the photon sphere
 #actually photons will fall in even if the starting angle is greater, because
 #they get deflected inwards (duh)
 
-b_ps = 9/2
+b_ps = 3*math.sqrt(3)/2
 beta_ps = -math.acos(math.sqrt(1-1/r0)*b_ps/r0)
 alpha_ps = math.pi/2 - beta_ps
 
@@ -83,7 +83,7 @@ def _cubic(x):
 
 for i in range(n_rays):
     # alpha is measured from x-axis up, beta is measured from r=const to the right
-    alpha = 3*math.pi/4 + ((i/n_rays-1)**9 + 1) * math.pi/4
+    alpha = 3*math.pi/4 + ((i/n_rays-1)**11 + 1) * (math.pi/4 - (math.pi-alpha_ps)*9/10)
     beta = math.pi/2 - alpha
     b = math.cos(beta) * r0 / math.sqrt(1-1/r0)
     v0 = math.sin(beta) * (1-1/r0)
