@@ -4,7 +4,7 @@ import collections
 
 import math
 import numpy as np
-from matplotlib import pyplot
+import matplotlib.pyplot as plt
 
 def _to_it(x):
     """If x is not iterable, puts it inside one"""
@@ -20,6 +20,7 @@ def integrate(f, T, y0, t0=0, N=10000, params=None, check_photon_sphere=True):
     N: number of points to calculate; returns N+1 points
     """
     y0 = np.array(y0)
+    h = T/N
     if params is None:
         params = ()
         def g(t, y, *p):
@@ -33,7 +34,7 @@ def integrate(f, T, y0, t0=0, N=10000, params=None, check_photon_sphere=True):
         if check_photon_sphere:
             if y[n][0] < 1.5:
                 break
-        h = (T/N) * (1 - 0.95/y[n][0])
+#        h = (T/N) * (1 - 0.95/y[n][0])
         k1 = g(t0 + n*h, y[n], *params)
         k2 = g(t0 + n*h + h/2, y[n] + (h/2)*k1, *params)
         k3 = g(t0 + n*h + h/2, y[n] + (h/2)*k2, *params)
@@ -55,7 +56,7 @@ def F(t, y, b):
 
 n_rays = 200
 
-pyplot.figure()
+fig = plt.figure()
 
 #Draw horizon and photon sphere
 r_h = 1
@@ -75,6 +76,7 @@ def _cubic(x):
     return 0.5 * (2*(x-1/2))**3 + 1/2
 
 rays = np.zeros((n_rays, 2, n_points+1))
+alphas = np.zeros(n_rays)
 last_ray = 0
 
 for i in range(n_rays):
@@ -88,24 +90,35 @@ for i in range(n_rays):
     (x, y) = (r*np.cos(phi), r*np.sin(phi))
     rays[i][0][0:last_point+1] = x
     rays[i][1][0:last_point+1] = y
+    alphas[i] = alpha
     r_min = np.min(r)
-    print(i, alpha, last_point, b, r_min)
+    if i % 20 == 0:
+        print(i, alpha, last_point, b, r_min)
     last_ray = i
     if r_min < 1.5:
         break
 
+def plot_bh():
+    plt.xlim(-r0, r0)
+    plt.ylim(-r0, r0)
+    plt.axes().set_aspect("equal")    
+    plt.plot([0],[0],"ok")
+    plt.plot(r_h*np.cos(phi), r_h*np.sin(phi), 'k')
+    plt.plot(r_ps*np.cos(phi), r_ps*np.sin(phi), 'k')
+
+def plot_animated(rays, last_ray, alphas):
+    for i in range(last_ray+1):
+        plt.cla()
+        plot_bh()
+        plt.plot(rays[i][0], rays[i][1])
+        plt.xlabel("angle = {:05.2f}º".format(180-alphas[i]*180/math.pi))
+        fig.canvas.draw()
+        plt.pause(0.1)
     
-pyplot.ion()
-    
-for i in range(last_ray+1):
-    pyplot.cla()
-    pyplot.xlim(-r0, r0)
-    pyplot.ylim(-r0, r0)
-    pyplot.axes().set_aspect("equal")    
-    pyplot.plot([0],[0],"ok")
-    pyplot.plot(r_h*np.cos(phi), r_h*np.sin(phi), 'k')
-    pyplot.plot(r_ps*np.cos(phi), r_ps*np.sin(phi), 'k')
-    pyplot.plot(rays[i][0], rays[i][1])
-    pyplot.pause(0.0001)
-    
-pyplot.show()
+def press(event):
+    if event.key == "r":
+        plot_animated(rays, last_ray, alphas)
+
+fig.canvas.mpl_connect("key_press_event", press)
+plot_bh()
+plt.show()
