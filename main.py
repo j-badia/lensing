@@ -13,7 +13,7 @@ def _to_it(x):
     else:
         return (x,)
 
-def integrate(f, T, y0, t0=0, N=00000, params=None, check_photon_sphere=True):
+def integrate(f, T, y0, t0=0, N=10000, params=None, check_photon_sphere=True):
     """RK4 integrator
     Solves y' = f(t, y, *params) over interval T
     y may be a vector
@@ -26,7 +26,7 @@ def integrate(f, T, y0, t0=0, N=00000, params=None, check_photon_sphere=True):
             return f(t, y)
     else:
         g = f
-    y = np.zeros([N+1,len(_to_it(y0))])
+    y = np.zeros([N+1, len(_to_it(y0))])
     y[0] = y0
     last_point = 0
     for n in range(N):
@@ -56,18 +56,11 @@ def F(t, y, b):
 n_rays = 200
 
 pyplot.figure()
-pyplot.xlim(-r0/2, r0/2)
-pyplot.ylim(-r0/2, r0/2)
-pyplot.axes().set_aspect("equal")
-
-pyplot.plot([0],[0],"ok")
 
 #Draw horizon and photon sphere
 r_h = 1
 r_ps = 1.5
 phi = np.linspace(0, 2*math.pi, 1000)
-pyplot.plot(r_h*np.cos(phi), r_h*np.sin(phi), 'k')
-pyplot.plot(r_ps*np.cos(phi), r_ps*np.sin(phi), 'k')
 
 ps_angle = math.atan(r_ps/r0) # half angle of the photon sphere
 #actually photons will fall in even if the starting angle is greater, because
@@ -81,20 +74,38 @@ def _cubic(x):
     """Maps [0,1] to [0,1] like a cubic: flatter near x=1/2"""
     return 0.5 * (2*(x-1/2))**3 + 1/2
 
+rays = np.zeros((n_rays, 2, n_points+1))
+last_ray = 0
+
 for i in range(n_rays):
     # alpha is measured from x-axis up, beta is measured from r=const to the right
-    alpha = 3*math.pi/4 + ((i/n_rays-1)**11 + 1) * (math.pi/4 - (math.pi-alpha_ps)*9/10)
+    alpha = 7*math.pi/8 + ((i/n_rays-1)**15 + 1) * (alpha_ps - 7*math.pi/8)
     beta = math.pi/2 - alpha
     b = math.cos(beta) * r0 / math.sqrt(1-1/r0)
     v0 = math.sin(beta) * (1-1/r0)
     (data, last_point) = integrate(F, 200, (r0,v0,0), N=n_points, params=(b,))
     (r, v, phi) = np.transpose(data[0:last_point+1])
     (x, y) = (r*np.cos(phi), r*np.sin(phi))
-    pyplot.plot(x, y)
-    pyplot.pause(0.0001)
+    rays[i][0][0:last_point+1] = x
+    rays[i][1][0:last_point+1] = y
     r_min = np.min(r)
     print(i, alpha, last_point, b, r_min)
+    last_ray = i
     if r_min < 1.5:
         break
 
+    
+pyplot.ion()
+    
+for i in range(last_ray+1):
+    pyplot.cla()
+    pyplot.xlim(-r0, r0)
+    pyplot.ylim(-r0, r0)
+    pyplot.axes().set_aspect("equal")    
+    pyplot.plot([0],[0],"ok")
+    pyplot.plot(r_h*np.cos(phi), r_h*np.sin(phi), 'k')
+    pyplot.plot(r_ps*np.cos(phi), r_ps*np.sin(phi), 'k')
+    pyplot.plot(rays[i][0], rays[i][1])
+    pyplot.pause(0.0001)
+    
 pyplot.show()
