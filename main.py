@@ -52,12 +52,12 @@ r0 = 50
 def F(y, t, b):
     """y is a tuple (r,v,phi)"""
     (r, v, phi) = y
-    acceleration = (b**2 / 2) * (r-2) / r**3
+    acceleration = 0.5 * b**2 * (2*r-3) / r**4
     return np.array((v, acceleration, b/r**2))
 
 def jac(y, t, b):
     return np.array([[0, 1, 0],
-                     [(6-2*r)/r**4, 0, 0],
+                     [3*(2-r)/r**5, 0, 0],
                      [-2*b/r**3, 0, 0]])
     
 n_rays = 200
