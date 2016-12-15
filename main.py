@@ -55,7 +55,13 @@ def F(y, t, b):
     acceleration = 0.5*(-1+r)*(2*r**3 + b**2 * (5-7*r+2*r**2))/r**6
     return np.array((v, acceleration, b*(1-1/r)/r**2))
 
-n_rays = 2000
+def jac(y, t, b):
+    x = (2*(3-2*r)*r**3 - 6*b**2 * (-5 + 10*r - 6*r**2 + r**3)) / r**7
+    return np.array([[0, 1, 0],
+                     [x, 0, 0],
+                     [b*(3-2*r)/r**4, 0, 0]])
+    
+n_rays = 200
 
 fig = plt.figure()
 
@@ -82,19 +88,18 @@ last_ray = 0
 
 for i in range(n_rays):
     # alpha is measured from x-axis up, beta is measured from r=const to the right
-    alpha = 7*math.pi/8 + ((i/n_rays-1)**15 + 1) * (alpha_ps - 7*math.pi/8)
+    alpha = 7*math.pi/8 + ((i/n_rays-1)**11 + 1) * (alpha_ps - 7*math.pi/8)
     beta = math.pi/2 - alpha
     b = math.cos(beta) * r0 / math.sqrt(1-1/r0)
     v0 = math.sin(beta) * (1-1/r0)
-    data = scipy.integrate.odeint(F, (r0, v0, 0), np.linspace(0, 200, n_points), args=(b,))
+    data = scipy.integrate.odeint(F, (r0, v0, 0), np.linspace(0, 200, n_points), Dfun=jac, args=(b,))
     (r, v, phi) = np.transpose(data)
     (x, y) = (r*np.cos(phi), r*np.sin(phi))
     rays[i][0] = x
     rays[i][1] = y
     alphas[i] = alpha
     r_min = np.min(r)
-    if i % 10 == 0:
-        print(i, alpha,  b, r_min)
+    print(i, alpha, b, r_min/math.sqrt(1-1/r_min), r_min)
     last_ray = i
     if r_min < 1.5:
         break
