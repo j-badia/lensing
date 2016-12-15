@@ -44,7 +44,7 @@ def integrate(f, T, y0, t0=0, N=10000, params=None, check_photon_sphere=True):
         last_point += 1
     return (y, last_point)
 
-n_points = 10000
+n_points = 100000
 
 # Measured in units of Sch. radius
 r0 = 50
@@ -60,7 +60,7 @@ def jac(y, t, b):
                      [3*(2-r)/r**5, 0, 0],
                      [-2*b/r**3, 0, 0]])
     
-n_rays = 200
+n_rays = 2000
 
 fig = plt.figure()
 
@@ -74,8 +74,7 @@ ps_angle = math.atan(r_ps/r0) # half angle of the photon sphere
 #they get deflected inwards (duh)
 
 b_ps = 3*math.sqrt(3)/2
-beta_ps = -math.acos(math.sqrt(1-1/r0)*b_ps/r0)
-alpha_ps = math.pi/2 - beta_ps
+alpha_ps = math.pi - math.asin(math.sqrt(1-1/r0)*b_ps/r0)
 
 def _cubic(x):
     """Maps [0,1] to [0,1] like a cubic: flatter near x=1/2"""
@@ -86,22 +85,23 @@ alphas = np.zeros(n_rays)
 last_ray = 0
 
 for i in range(n_rays):
-    # alpha is measured from x-axis up, beta is measured from r=const to the right
-    alpha = 7*math.pi/8 + ((i/n_rays-1)**11 + 1) * (alpha_ps - 7*math.pi/8)
-    beta = math.pi/2 - alpha
-    b = math.cos(beta) * r0 / math.sqrt(1-1/r0)
-    v0 = math.sin(beta)
-    data = scipy.integrate.odeint(F, (r0, v0, 0), np.linspace(0, 200, n_points), Dfun=jac, args=(b,))
+    # alpha is measured from x-axis up
+    alpha = 7*math.pi/8 + ((i/n_rays-1)**15 + 1) * (alpha_ps - 7*math.pi/8+0.00000001)
+#    alpha = alpha_ps+0.00000001
+    b = math.sin(alpha) * r0 / math.sqrt(1-1/r0)
+    v0 = math.cos(alpha)
+    data = scipy.integrate.odeint(F, (r0, v0, 0), np.linspace(0, 1000, n_points), Dfun=jac, args=(b,))
     (r, v, phi) = np.transpose(data)
     (x, y) = (r*np.cos(phi), r*np.sin(phi))
+    r_min = np.min(r)
+    if i % 10 == 0:
+        print(i, alpha-alpha_ps, b, r_min)
+    if r_min < 1.5:
+        break
     rays[i][0] = x
     rays[i][1] = y
     alphas[i] = alpha
-    r_min = np.min(r)
-    print(i, alpha, b, r_min/math.sqrt(1-1/r_min), r_min)
     last_ray = i
-    if r_min < 1.5:
-        break
     
 def plot_bh():
     plt.xlim(-r0, r0)
