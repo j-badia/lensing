@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import collections
-
 import math
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,33 +13,29 @@ def _to_it(x):
     else:
         return (x,)
 
-def integrate(f, T, y0, t0=0, N=10000, params=None, check_photon_sphere=True):
+def integrate(f, y0, t_array, args=None):
     """RK4 integrator
     Solves y' = f(t, y, *params) over interval T
     y may be a vector
     N: number of points to calculate; returns N+1 points
     """
     y0 = np.array(y0)
-    h = T/N
-    if params is None:
-        params = ()
+    if args is None:
+        args = ()
         def g(t, y, *p):
             return f(t, y)
     else:
         g = f
-    y = np.zeros([N+1, len(_to_it(y0))])
+    integrator = scipy.integrate.ode(g)
+    integrator.set_f_params(*args)
+    integrator.set_initial_value(y0, t_array[0])
+    y = np.zeros([len(t_array), len(_to_it(y0))])
     y[0] = y0
     last_point = 0
-    for n in range(N):
-        if check_photon_sphere:
-            if y[n][0] < 1.5:
-                break
-#        h = (T/N) * (1 - 0.95/y[n][0])
-        k1 = g(t0 + n*h, y[n], *params)
-        k2 = g(t0 + n*h + h/2, y[n] + (h/2)*k1, *params)
-        k3 = g(t0 + n*h + h/2, y[n] + (h/2)*k2, *params)
-        k4 = g(t0 + n*h + h, y[n] + h*k3, *params)
-        y[n+1] = y[n] + (h/6)*(k1 + 2*k2 + 2*k3 + k4)
+    for n in range(len(t_array)):
+        if y[n][0] < 1.5:
+            break
+        
         last_point += 1
     return (y, last_point)
 
@@ -49,13 +44,17 @@ n_points = 10000
 # Measured in units of Sch. radius
 r0 = 50
 
-def F(y, t, b):
+def F(t, y, b):
     """y is a tuple (r,v,phi)"""
     (r, v, phi) = y
+    if r < 1.5:
+        return np.array((0, 0, 0))
     acceleration = 0.5*(-1+r)*(2*r**3 + b**2 * (5-7*r+2*r**2))/r**6
     return np.array((v, acceleration, b*(1-1/r)/r**2))
 
-n_rays = 2000
+
+    
+n_rays = 200
 
 fig = plt.figure()
 
@@ -63,10 +62,6 @@ fig = plt.figure()
 r_h = 1
 r_ps = 1.5
 phi = np.linspace(0, 2*math.pi, 1000)
-
-ps_angle = math.atan(r_ps/r0) # half angle of the photon sphere
-#actually photons will fall in even if the starting angle is greater, because
-#they get deflected inwards (duh)
 
 b_ps = 3*math.sqrt(3)/2
 beta_ps = -math.acos(math.sqrt(1-1/r0)*b_ps/r0)
@@ -82,7 +77,7 @@ last_ray = 0
 
 for i in range(n_rays):
     # alpha is measured from x-axis up, beta is measured from r=const to the right
-    alpha = 7*math.pi/8 + ((i/n_rays-1)**15 + 1) * (alpha_ps - 7*math.pi/8)
+    alpha = 7*math.pi/8 + ((i/n_rays-1)**15 + 1) * (alpha_ps - 7*math.pi/8) 
     beta = math.pi/2 - alpha
     b = math.cos(beta) * r0 / math.sqrt(1-1/r0)
     v0 = math.sin(beta) * (1-1/r0)
@@ -93,8 +88,7 @@ for i in range(n_rays):
     rays[i][1] = y
     alphas[i] = alpha
     r_min = np.min(r)
-    if i % 10 == 0:
-        print(i, alpha,  b, r_min)
+    print(i, alpha,  b, r_min)
     last_ray = i
     if r_min < 1.5:
         break
@@ -114,11 +108,13 @@ def plot_animated(rays, last_ray, alphas):
         plt.plot(rays[i][0], rays[i][1])
         plt.xlabel("angle = {:08.5f}º - i = {}".format(180-alphas[i]*180/math.pi, i))
         fig.canvas.draw()
-        plt.pause(0.0005)
+        plt.pause(0.05)
     
 def press(event):
     if event.key == "r":
         plot_animated(rays, last_ray, alphas)
+    if event.key == "b":
+        plot_bh()
 
 fig.canvas.mpl_connect("key_press_event", press)
 plot_bh()
