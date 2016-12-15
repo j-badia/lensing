@@ -52,14 +52,13 @@ r0 = 50
 def F(y, t, b):
     """y is a tuple (r,v,phi)"""
     (r, v, phi) = y
-    acceleration = 0.5*(-1+r)*(2*r**3 + b**2 * (5-7*r+2*r**2))/r**6
-    return np.array((v, acceleration, b*(1-1/r)/r**2))
+    acceleration = 0.5 * b**2 * (2*r-3) / r**4
+    return np.array((v, acceleration, b/r**2))
 
 def jac(y, t, b):
-    x = (2*(3-2*r)*r**3 - 6*b**2 * (-5 + 10*r - 6*r**2 + r**3)) / r**7
     return np.array([[0, 1, 0],
-                     [x, 0, 0],
-                     [b*(3-2*r)/r**4, 0, 0]])
+                     [3*(2-r)/r**5, 0, 0],
+                     [-2*b/r**3, 0, 0]])
     
 n_rays = 200
 
@@ -91,7 +90,7 @@ for i in range(n_rays):
     alpha = 7*math.pi/8 + ((i/n_rays-1)**11 + 1) * (alpha_ps - 7*math.pi/8)
     beta = math.pi/2 - alpha
     b = math.cos(beta) * r0 / math.sqrt(1-1/r0)
-    v0 = math.sin(beta) * (1-1/r0)
+    v0 = math.sin(beta)
     data = scipy.integrate.odeint(F, (r0, v0, 0), np.linspace(0, 200, n_points), Dfun=jac, args=(b,))
     (r, v, phi) = np.transpose(data)
     (x, y) = (r*np.cos(phi), r*np.sin(phi))
